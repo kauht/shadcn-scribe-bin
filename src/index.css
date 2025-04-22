@@ -122,11 +122,11 @@
   }
 
   .vertical-line-left {
-    @apply left-[calc(50%-600px)] md:left-[calc(50%-640px)];
+    @apply left-[calc(50%-640px)] md:left-[calc(50%-680px)];
   }
 
   .vertical-line-right {
-    @apply right-[calc(50%-600px)] md:right-[calc(50%-640px)];
+    @apply right-[calc(50%-640px)] md:right-[calc(50%-680px)];
   }
 
   .diagonal-line::after {
