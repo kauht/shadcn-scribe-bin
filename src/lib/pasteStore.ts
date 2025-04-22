@@ -67,19 +67,20 @@ export function getPasteById(id: string): Paste | null {
     return null;
   }
   
-  // Increment view count
-  paste.viewCount += 1;
-  
-  // Handle burn after read
-  if (paste.burnAfterRead && paste.viewCount >= 1) {
-    // Store a copy before removing
-    const pasteCopy = { ...paste };
-    // Remove from storage
-    pastes = pastes.filter(p => p.id !== id);
-    return pasteCopy;
-  }
-  
   return paste;
+}
+
+export function incrementViewCount(id: string): void {
+  const paste = pastes.find(p => p.id === id);
+  if (paste) {
+    paste.viewCount += 1;
+    
+    // Handle burn after read
+    if (paste.burnAfterRead && paste.viewCount > 1) {
+      // Remove from storage
+      pastes = pastes.filter(p => p.id !== id);
+    }
+  }
 }
 
 export function checkPassword(pasteId: string, password: string): boolean {

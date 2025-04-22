@@ -112,7 +112,7 @@ const ViewPaste = () => {
                     )}
                     <p>Views: {paste.viewCount}</p>
                   </div>
-                  <CodeViewer code={paste.content} language={paste.language} />
+                  {paste && <CodeViewer code={paste.content} language={paste.language} />}
                 </div>
               ) : null}
             </div>
