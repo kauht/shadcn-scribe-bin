@@ -1,4 +1,5 @@
-import { useState, useCallback } from "react";
+
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -26,21 +27,17 @@ import {
   getExpiryOptions, 
   getExpiryDate
 } from "@/lib/utils";
-import { getCurrentUser } from "@/lib/pasteStore";
-import { api } from "@/lib/api";
+import { createPaste, getCurrentUser } from "@/lib/pasteStore";
 
 export function PasteForm() {
-  // Get required data
+  const navigate = useNavigate();
   const languages = getLanguages();
   const expiryOptions = getExpiryOptions();
   const currentUser = getCurrentUser();
   
-  // State variables
   const [isPasswordProtected, setIsPasswordProtected] = useState(false);
   const [burnAfterRead, setBurnAfterRead] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  // Form setup
+
   const form = useForm({
     defaultValues: {
       title: "",
@@ -52,58 +49,41 @@ export function PasteForm() {
     }
   });
 
-  const navigate = useNavigate();
-
-  // Handle expiry option changes
-  const handleExpiryChange = useCallback((value: string) => {
+  const handleExpiryChange = (value: string) => {
     form.setValue("expiry", value);
     if (value === "burn") {
       setBurnAfterRead(true);
     } else if (burnAfterRead) {
       setBurnAfterRead(false);
     }
-  }, [form, burnAfterRead]);
+  };
 
-  // Handle form submission
-  const onSubmit = form.handleSubmit(async (values) => {
-    // Validate content
-    if (!values.content || values.content.trim() === "") {
+  const onSubmit = form.handleSubmit((values) => {
+    if (!values.content.trim()) {
       toast.error("Paste content cannot be empty");
       return;
     }
 
-    // Show loading state
-    setIsSubmitting(true);
-
     try {
-      // Calculate expiry date
       const expireAt = getExpiryDate(values.expiry);
       
-      // Create paste
-      const paste = await api.createPaste({
+      const paste = createPaste({
         title: values.title || "Untitled",
         content: values.content,
         language: values.language,
         expireAt,
-        userId: currentUser?.id || "anonymous",
+        userId: currentUser?.id || null,
         isPrivate: values.isPrivate,
         isPasswordProtected,
         password: isPasswordProtected ? values.password : undefined,
         burnAfterRead: values.expiry === "burn" || burnAfterRead,
       });
 
-      console.log("Created paste:", paste);
-      
-      // Show success message
       toast.success("Paste created successfully");
-      
-      // Navigate to the paste view
       navigate(`/paste/${paste.id}`);
     } catch (error) {
-      console.error("Failed to create paste:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to create paste");
-    } finally {
-      setIsSubmitting(false);
+      toast.error("Failed to create paste");
+      console.error(error);
     }
   });
 
@@ -146,53 +126,26 @@ export function PasteForm() {
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="language"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel htmlFor="language">Syntax Highlighting</FormLabel>
-              <Select
-                onValueChange={field.onChange}
-                defaultValue={field.value}
-              >
-                <FormControl>
-                  <SelectTrigger id="language">
-                    <SelectValue placeholder="Select language" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {languages.map((language) => (
-                    <SelectItem key={language.id} value={language.id}>
-                      {language.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </FormItem>
-          )}
-        />
-
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
             control={form.control}
-            name="expiry"
+            name="language"
             render={({ field }) => (
               <FormItem>
-                <FormLabel htmlFor="expiry">Expiration</FormLabel>
+                <FormLabel htmlFor="language">Syntax Highlighting</FormLabel>
                 <Select
-                  onValueChange={handleExpiryChange}
+                  onValueChange={field.onChange}
                   defaultValue={field.value}
                 >
                   <FormControl>
-                    <SelectTrigger id="expiry">
-                      <SelectValue placeholder="Select expiration" />
+                    <SelectTrigger id="language">
+                      <SelectValue placeholder="Select language" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {expiryOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
+                    {languages.map((lang) => (
+                      <SelectItem key={lang.id} value={lang.id}>
+                        {lang.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -201,36 +154,92 @@ export function PasteForm() {
             )}
           />
 
+          <FormField
+            control={form.control}
+            name="expiry"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel htmlFor="expiry">Expire After</FormLabel>
+                <Select
+                  onValueChange={(value) => {
+                    field.onChange(value);
+                    handleExpiryChange(value);
+                  }}
+                  defaultValue={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger id="expiry">
+                      <SelectValue placeholder="Select expiry" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {expiryOptions.map((option) => (
+                      <SelectItem key={option.id} value={option.id}>
+                        {option.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-4">
             <FormField
               control={form.control}
               name="isPrivate"
               render={({ field }) => (
-                <FormItem className="flex items-center space-x-2">
+                <FormItem className="flex flex-row items-center gap-2 space-y-0">
                   <FormControl>
                     <Checkbox
-                      id="is-private"
+                      id="private"
                       checked={field.value}
                       onCheckedChange={field.onChange}
                     />
                   </FormControl>
-                  <FormLabel
-                    htmlFor="is-private"
-                    className="text-sm font-normal"
-                  >
-                    Private paste
+                  <FormLabel htmlFor="private" className="text-sm font-normal">
+                    Private (not listed publicly)
                   </FormLabel>
                 </FormItem>
               )}
             />
 
-            <div className="flex items-center space-x-2">
+            <FormField
+              control={form.control}
+              name="expiry"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center gap-2 space-y-0">
+                  <FormControl>
+                    <Checkbox
+                      id="burn"
+                      checked={burnAfterRead || field.value === "burn"}
+                      onCheckedChange={(checked) => {
+                        setBurnAfterRead(checked === true);
+                        if (checked === true && field.value !== "burn") {
+                          form.setValue("expiry", "burn");
+                        }
+                      }}
+                      disabled={field.value === "burn"}
+                    />
+                  </FormControl>
+                  <FormLabel htmlFor="burn" className="text-sm font-normal">
+                    Burn after read
+                  </FormLabel>
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex flex-row items-center gap-2 space-y-0">
               <Checkbox
                 id="password-protected"
                 checked={isPasswordProtected}
                 onCheckedChange={(checked) => {
-                  setIsPasswordProtected(!!checked);
-                  if (!checked) {
+                  setIsPasswordProtected(checked === true);
+                  if (checked !== true) {
                     form.setValue("password", "");
                   }
                 }}
@@ -265,8 +274,8 @@ export function PasteForm() {
           </div>
         </div>
 
-        <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting}>
-          {isSubmitting ? "Creating..." : "Create Paste"}
+        <Button type="submit" className="w-full md:w-auto">
+          Create Paste
         </Button>
       </form>
     </Form>

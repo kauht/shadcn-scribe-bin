@@ -1,76 +1,60 @@
-import { useState, useEffect, useCallback } from 'react';
-import { api } from '@/lib/api';
-import type { Paste } from '@/lib/types';
 
-export function usePaste(id: string | undefined) {
-  const [paste, setPaste] = useState<Paste | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { supabase } from '@/lib/supabase'
+import { toast } from 'sonner'
+import { Paste } from '@/lib/types'
 
-  // Load paste data
-  useEffect(() => {
-    if (!id) {
-      setIsLoading(false);
-      setError(new Error("No paste ID provided"));
-      return;
+export const usePaste = (id?: string) => {
+  const queryClient = useQueryClient()
+
+  const { data: paste, isLoading, error } = useQuery({
+    queryKey: ['paste', id],
+    queryFn: async () => {
+      if (!id) return null
+      
+      const { data, error } = await supabase
+        .from('pastes')
+        .select('*')
+        .eq('id', id)
+        .single()
+
+      if (error) throw error
+      return data as Paste
+    },
+    enabled: !!id
+  })
+
+  const incrementViewCount = useMutation({
+    mutationFn: async (pasteId: string) => {
+      const { error } = await supabase.rpc('increment_view_count', {
+        paste_id: pasteId
+      })
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['paste', id] })
+    },
+    onError: () => {
+      toast.error('Failed to update view count')
     }
+  })
 
-    let isMounted = true;
+  const checkPassword = async (password: string) => {
+    const { data, error } = await supabase
+      .rpc('check_paste_password', {
+        paste_id: id,
+        password_attempt: password
+      })
+    
+    if (error) throw error
+    return data
+  }
 
-    const loadPaste = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        
-        // Get paste from API
-        const pasteData = await api.getPasteById(id);
-        
-        if (!pasteData) {
-          throw new Error("Paste not found or has expired");
-        }
-        
-        // Only update state if component is still mounted
-        if (isMounted) {
-          setPaste(pasteData);
-        }
-      } catch (err) {
-        console.error("Error loading paste:", err);
-        if (isMounted) {
-          setError(err instanceof Error ? err : new Error("Failed to load paste"));
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    loadPaste();
-
-    // Cleanup function
-    return () => {
-      isMounted = false;
-    };
-  }, [id]);
-
-  // Function to verify password
-  const verifyPassword = useCallback(async (password: string): Promise<boolean> => {
-    if (!id) return false;
-    return await api.checkPassword(id, password);
-  }, [id]);
-  
-  // Function to increment view count
-  const incrementViews = useCallback(async () => {
-    if (id && paste) {
-      await api.incrementViewCount(id);
-    }
-  }, [id, paste]);
-
-  return { 
-    paste, 
-    isLoading, 
-    error, 
-    checkPassword: verifyPassword,
-    incrementViewCount: incrementViews 
-  };
+  return {
+    paste,
+    isLoading,
+    error,
+    incrementViewCount: () => incrementViewCount.mutate(id!),
+    checkPassword
+  }
 }

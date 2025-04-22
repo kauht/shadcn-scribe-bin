@@ -1,3 +1,4 @@
+
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { toast } from "@/components/ui/sonner";
@@ -26,11 +27,11 @@ export function copyToClipboard(text: string) {
     });
 }
 
-export function generateId(length = 10): string {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  let result = "";
+export function generateId(length: number = 8): string {
+  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
   for (let i = 0; i < length; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
+    result += characters.charAt(Math.floor(Math.random() * characters.length));
   }
   return result;
 }

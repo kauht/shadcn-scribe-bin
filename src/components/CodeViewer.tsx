@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -22,51 +23,68 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { Copy } from "lucide-react";
-import { usePaste } from "@/hooks/usePaste";
+import { getPasteById, checkPassword } from "@/lib/pasteStore";
 import { copyToClipboard, formatDate } from "@/lib/utils";
+import { Paste } from "@/lib/types";
 
-export function CodeViewer({ id }: { id: string }) {
-  const { paste, isLoading, error } = usePaste(id);
-
+export function CodeViewer() {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [paste, setPaste] = useState<Paste | null>(null);
   const [isPasswordRequired, setIsPasswordRequired] = useState(false);
   const [password, setPassword] = useState("");
   const [burnWarningOpen, setBurnWarningOpen] = useState(false);
-
-  useEffect(() => {
-    if (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to load paste");
+  
+  const loadPaste = () => {
+    if (!id) return;
+    
+    const pasteData = getPasteById(id);
+    
+    if (!pasteData) {
+      toast.error("Paste not found or has expired");
+      navigate("/");
+      return;
     }
-  }, [error]);
-
+    
+    if (pasteData.isPasswordProtected && !isPasswordRequired) {
+      setIsPasswordRequired(true);
+      return;
+    }
+    
+    if (pasteData.burnAfterRead && !burnWarningOpen) {
+      setBurnWarningOpen(true);
+      return;
+    }
+    
+    setPaste(pasteData);
+  };
+  
+  useEffect(() => {
+    loadPaste();
+  }, [id]);
+  
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
+    
     if (!id) return;
-
+    
     if (checkPassword(id, password)) {
       setIsPasswordRequired(false);
+      loadPaste();
     } else {
       toast.error("Incorrect password");
     }
   };
-
+  
   const handleBurnConfirm = () => {
     setBurnWarningOpen(false);
+    loadPaste();
   };
-
-  if (isLoading) {
-    return <div className="flex items-center justify-center p-8">
-      <div className="text-muted-foreground">Loading paste...</div>
-    </div>;
+  
+  if (!id) {
+    return <div>Invalid paste ID</div>;
   }
-
-  if (error || !paste) {
-    return <div className="p-4 text-destructive bg-destructive/10 rounded-md">
-      {error instanceof Error ? error.message : "Failed to load paste"}
-    </div>;
-  }
-
+  
   if (isPasswordRequired) {
     return (
       <Dialog open={isPasswordRequired} onOpenChange={setIsPasswordRequired}>
@@ -99,7 +117,7 @@ export function CodeViewer({ id }: { id: string }) {
       </Dialog>
     );
   }
-
+  
   if (burnWarningOpen) {
     return (
       <AlertDialog open={burnWarningOpen} onOpenChange={setBurnWarningOpen}>
@@ -118,7 +136,11 @@ export function CodeViewer({ id }: { id: string }) {
       </AlertDialog>
     );
   }
-
+  
+  if (!paste) {
+    return <div className="flex justify-center p-8">Loading...</div>;
+  }
+  
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -141,20 +163,16 @@ export function CodeViewer({ id }: { id: string }) {
           <span>Copy</span>
         </Button>
       </div>
-
+      
       <div className="relative">
         <div className="absolute top-0 right-0 bg-muted px-3 py-1 rounded-bl text-xs">
           {getLanguages().find(l => l.id === paste.language)?.name || "Plain Text"}
         </div>
         <pre className="p-4 rounded-md bg-muted/50 border overflow-x-auto code-editor whitespace-pre-wrap">
-          <code>
-            {typeof paste.content === 'string'
-              ? paste.content
-              : JSON.stringify(paste.content, null, 2)}
-          </code>
+          <code>{paste.content}</code>
         </pre>
       </div>
-
+      
       {paste.burnAfterRead && (
         <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md text-center">
           This paste has been deleted and won't be accessible again.
