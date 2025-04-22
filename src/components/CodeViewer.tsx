@@ -54,7 +54,9 @@ export function CodeViewer({ id }: { id: string }) {
   }
 
   if (error) {
-    return <div>{error.message}</div>;
+    return <div className="text-destructive">
+      {error instanceof Error ? error.message : "An error occurred while loading the paste"}
+    </div>;
   }
 
   if (!paste) {

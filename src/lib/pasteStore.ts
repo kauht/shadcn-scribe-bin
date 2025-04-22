@@ -1,4 +1,3 @@
-
 import { Paste, User } from "./types";
 import { generateId } from "./utils";
 
@@ -121,16 +120,26 @@ export function getUserPastes(userId: string): Paste[] {
 
 // Paste functions
 export function createPaste(pasteData: Omit<Paste, 'id' | 'createdAt' | 'viewCount'>): Paste {
-  const newPaste: Paste = {
-    ...pasteData,
-    id: generateId(8),
-    createdAt: new Date(),
-    viewCount: 0,
-  };
-  
-  pastes.push(newPaste);
-  savePastes(pastes);
-  return newPaste;
+  try {
+    const newPaste: Paste = {
+      ...pasteData,
+      id: generateId(8),
+      createdAt: new Date(),
+      viewCount: 0,
+    };
+    
+    // Validate required fields
+    if (!newPaste.content) {
+      throw new Error("Paste content is required");
+    }
+    
+    pastes.push(newPaste);
+    savePastes(pastes);
+    return newPaste;
+  } catch (error) {
+    console.error("Failed to create paste:", error);
+    throw new Error("Failed to create paste: " + (error instanceof Error ? error.message : "Unknown error"));
+  }
 }
 
 export function getPasteById(id: string): Paste | null {
