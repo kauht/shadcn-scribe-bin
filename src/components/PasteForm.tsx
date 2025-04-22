@@ -26,7 +26,8 @@ import {
   getExpiryOptions, 
   getExpiryDate
 } from "@/lib/utils";
-import { createPaste, getCurrentUser } from "@/lib/pasteStore";
+import { getCurrentUser } from "@/lib/pasteStore";
+import { api } from "@/lib/api";
 
 export function PasteForm() {
   // Get required data
@@ -64,7 +65,7 @@ export function PasteForm() {
   }, [form, burnAfterRead]);
 
   // Handle form submission
-  const onSubmit = form.handleSubmit((values) => {
+  const onSubmit = form.handleSubmit(async (values) => {
     // Validate content
     if (!values.content || values.content.trim() === "") {
       toast.error("Paste content cannot be empty");
@@ -79,7 +80,7 @@ export function PasteForm() {
       const expireAt = getExpiryDate(values.expiry);
       
       // Create paste
-      const paste = createPaste({
+      const paste = await api.createPaste({
         title: values.title || "Untitled",
         content: values.content,
         language: values.language,
@@ -96,12 +97,12 @@ export function PasteForm() {
       // Show success message
       toast.success("Paste created successfully");
       
-      // Use React Router navigation with a relative path instead of window.location
-      // This ensures we stay within the application
+      // Navigate to the paste view
       navigate(`/paste/${paste.id}`);
     } catch (error) {
       console.error("Failed to create paste:", error);
       toast.error(error instanceof Error ? error.message : "Failed to create paste");
+    } finally {
       setIsSubmitting(false);
     }
   });

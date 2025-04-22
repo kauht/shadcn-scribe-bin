@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { getPasteById, incrementViewCount, checkPassword } from '@/lib/pasteStore';
+import { useState, useEffect, useCallback } from 'react';
+import { api } from '@/lib/api';
 import type { Paste } from '@/lib/types';
 
 export function usePaste(id: string | undefined) {
@@ -7,51 +7,64 @@ export function usePaste(id: string | undefined) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
+  // Load paste data
   useEffect(() => {
-    // Skip if no ID is provided
     if (!id) {
       setIsLoading(false);
       setError(new Error("No paste ID provided"));
       return;
     }
 
-    const loadPaste = () => {
+    let isMounted = true;
+
+    const loadPaste = async () => {
       try {
         setIsLoading(true);
         setError(null);
         
-        // Get paste from storage
-        const pasteData = getPasteById(id);
+        // Get paste from API
+        const pasteData = await api.getPasteById(id);
         
         if (!pasteData) {
           throw new Error("Paste not found or has expired");
         }
         
-        // Set paste data
-        setPaste(pasteData);
+        // Only update state if component is still mounted
+        if (isMounted) {
+          setPaste(pasteData);
+        }
       } catch (err) {
         console.error("Error loading paste:", err);
-        setError(err instanceof Error ? err : new Error("Failed to load paste"));
+        if (isMounted) {
+          setError(err instanceof Error ? err : new Error("Failed to load paste"));
+        }
       } finally {
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
 
     loadPaste();
+
+    // Cleanup function
+    return () => {
+      isMounted = false;
+    };
   }, [id]);
 
   // Function to verify password
-  const verifyPassword = (password: string): boolean => {
+  const verifyPassword = useCallback(async (password: string): Promise<boolean> => {
     if (!id) return false;
-    return checkPassword(id, password);
-  };
+    return await api.checkPassword(id, password);
+  }, [id]);
   
   // Function to increment view count
-  const incrementViews = () => {
+  const incrementViews = useCallback(async () => {
     if (id && paste) {
-      incrementViewCount(id);
+      await api.incrementViewCount(id);
     }
-  };
+  }, [id, paste]);
 
   return { 
     paste, 
