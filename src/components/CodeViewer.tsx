@@ -33,6 +33,12 @@ export function CodeViewer({ id }: { id: string }) {
   const [password, setPassword] = useState("");
   const [burnWarningOpen, setBurnWarningOpen] = useState(false);
 
+  useEffect(() => {
+    if (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to load paste");
+    }
+  }, [error]);
+
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -50,17 +56,15 @@ export function CodeViewer({ id }: { id: string }) {
   };
 
   if (isLoading) {
-    return <div>Loading...</div>;
-  }
-
-  if (error) {
-    return <div className="text-destructive">
-      {error instanceof Error ? error.message : "An error occurred while loading the paste"}
+    return <div className="flex items-center justify-center p-8">
+      <div className="text-muted-foreground">Loading paste...</div>
     </div>;
   }
 
-  if (!paste) {
-    return <div>No paste found</div>;
+  if (error || !paste) {
+    return <div className="p-4 text-destructive bg-destructive/10 rounded-md">
+      {error instanceof Error ? error.message : "Failed to load paste"}
+    </div>;
   }
 
   if (isPasswordRequired) {

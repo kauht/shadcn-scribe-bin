@@ -1,60 +1,34 @@
+import { useState, useEffect } from 'react';
+import { getPasteById, incrementViewCount } from '@/lib/pasteStore';
+import type { Paste } from '@/lib/types';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { toast } from 'sonner'
-import { Paste } from '@/lib/types'
+export function usePaste(id: string) {
+  const [paste, setPaste] = useState<Paste | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
-export const usePaste = (id?: string) => {
-  const queryClient = useQueryClient()
+  useEffect(() => {
+    const loadPaste = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        const paste = getPasteById(id);
+        if (!paste) {
+          throw new Error("Paste not found");
+        }
+        
+        setPaste(paste);
+        incrementViewCount(id);
+      } catch (err) {
+        setError(err instanceof Error ? err : new Error("Failed to load paste"));
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const { data: paste, isLoading, error } = useQuery({
-    queryKey: ['paste', id],
-    queryFn: async () => {
-      if (!id) return null
-      
-      const { data, error } = await supabase
-        .from('pastes')
-        .select('*')
-        .eq('id', id)
-        .single()
+    loadPaste();
+  }, [id]);
 
-      if (error) throw error
-      return data as Paste
-    },
-    enabled: !!id
-  })
-
-  const incrementViewCount = useMutation({
-    mutationFn: async (pasteId: string) => {
-      const { error } = await supabase.rpc('increment_view_count', {
-        paste_id: pasteId
-      })
-      if (error) throw error
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['paste', id] })
-    },
-    onError: () => {
-      toast.error('Failed to update view count')
-    }
-  })
-
-  const checkPassword = async (password: string) => {
-    const { data, error } = await supabase
-      .rpc('check_paste_password', {
-        paste_id: id,
-        password_attempt: password
-      })
-    
-    if (error) throw error
-    return data
-  }
-
-  return {
-    paste,
-    isLoading,
-    error,
-    incrementViewCount: () => incrementViewCount.mutate(id!),
-    checkPassword
-  }
+  return { paste, isLoading, error };
 }
