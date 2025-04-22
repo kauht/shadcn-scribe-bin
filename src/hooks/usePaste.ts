@@ -1,26 +1,36 @@
 import { useState, useEffect } from 'react';
-import { getPasteById, incrementViewCount } from '@/lib/pasteStore';
+import { getPasteById, incrementViewCount, checkPassword } from '@/lib/pasteStore';
 import type { Paste } from '@/lib/types';
 
-export function usePaste(id: string) {
+export function usePaste(id: string | undefined) {
   const [paste, setPaste] = useState<Paste | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    const loadPaste = async () => {
+    // Skip if no ID is provided
+    if (!id) {
+      setIsLoading(false);
+      setError(new Error("No paste ID provided"));
+      return;
+    }
+
+    const loadPaste = () => {
       try {
         setIsLoading(true);
         setError(null);
         
-        const paste = getPasteById(id);
-        if (!paste) {
-          throw new Error("Paste not found");
+        // Get paste from storage
+        const pasteData = getPasteById(id);
+        
+        if (!pasteData) {
+          throw new Error("Paste not found or has expired");
         }
         
-        setPaste(paste);
-        incrementViewCount(id);
+        // Set paste data
+        setPaste(pasteData);
       } catch (err) {
+        console.error("Error loading paste:", err);
         setError(err instanceof Error ? err : new Error("Failed to load paste"));
       } finally {
         setIsLoading(false);
@@ -30,5 +40,24 @@ export function usePaste(id: string) {
     loadPaste();
   }, [id]);
 
-  return { paste, isLoading, error };
+  // Function to verify password
+  const verifyPassword = (password: string): boolean => {
+    if (!id) return false;
+    return checkPassword(id, password);
+  };
+  
+  // Function to increment view count
+  const incrementViews = () => {
+    if (id) {
+      incrementViewCount(id);
+    }
+  };
+
+  return { 
+    paste, 
+    isLoading, 
+    error, 
+    checkPassword: verifyPassword,
+    incrementViewCount: incrementViews 
+  };
 }
