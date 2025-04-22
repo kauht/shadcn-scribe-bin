@@ -30,7 +30,7 @@ export function Header() {
             to="/" 
             className="text-lg font-semibold tracking-tight hover:opacity-80 transition-opacity"
           >
-            CodeBin
+            kaught.cc
           </Link>
         </div>
         <div className="flex items-center gap-4">

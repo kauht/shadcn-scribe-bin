@@ -18,7 +18,7 @@ import { getCurrentUser } from "@/lib/pasteStore";
 
 const Settings = () => {
   const navigate = useNavigate();
-  const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   
   const currentUser = getCurrentUser();
@@ -29,7 +29,7 @@ const Settings = () => {
       return;
     }
     
-    setName(currentUser.name);
+    setUsername(currentUser.name);
     setEmail(currentUser.email);
   }, [currentUser, navigate]);
   
@@ -63,14 +63,14 @@ const Settings = () => {
                     <div className="space-y-2">
                       <label
                         className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                        htmlFor="name"
+                        htmlFor="username"
                       >
-                        Name
+                        Username
                       </label>
                       <Input
-                        id="name"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
+                        id="username"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
                       />
                     </div>
                     <div className="space-y-2">
@@ -97,7 +97,6 @@ const Settings = () => {
           </div>
         </section>
       </main>
-      <div className="diagonal-line my-8" />
       <Footer />
     </div>
   );

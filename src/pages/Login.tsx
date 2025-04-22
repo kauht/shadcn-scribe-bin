@@ -100,7 +100,6 @@ const Login = () => {
           </Card>
         </div>
       </main>
-      <div className="diagonal-line my-8" />
       <Footer />
     </div>
   );

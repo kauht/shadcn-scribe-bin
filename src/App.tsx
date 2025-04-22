@@ -12,7 +12,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import MyPastes from "./pages/MyPastes";
 import Settings from "./pages/Settings";
-import Info from "./pages/Info";
+import TermsPage from "./pages/TermsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,7 +31,7 @@ const App = () => (
             <Route path="/register" element={<Register />} />
             <Route path="/my-pastes" element={<MyPastes />} />
             <Route path="/settings" element={<Settings />} />
-            <Route path="/:type(terms|privacy|contact|api)" element={<Info />} />
+            <Route path="/:type(terms|privacy|contact|api)" element={<TermsPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

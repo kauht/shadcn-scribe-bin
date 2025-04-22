@@ -17,6 +17,7 @@ const ViewPaste = () => {
   const [needsPassword, setNeedsPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [passwordVerified, setPasswordVerified] = useState(false);
 
   useEffect(() => {
     if (!id) {
@@ -34,7 +35,7 @@ const ViewPaste = () => {
         return;
       }
 
-      if (pasteData.isPasswordProtected) {
+      if (pasteData.isPasswordProtected && !passwordVerified) {
         setNeedsPassword(true);
         setLoading(false);
       } else {
@@ -47,7 +48,7 @@ const ViewPaste = () => {
       setError("Failed to load paste");
       setLoading(false);
     }
-  }, [id]);
+  }, [id, passwordVerified]);
 
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,6 +64,7 @@ const ViewPaste = () => {
       }
       
       if (pasteData.password === password) {
+        setPasswordVerified(true);
         setPaste(pasteData);
         incrementViewCount(id);
         setNeedsPassword(false);
@@ -112,14 +114,13 @@ const ViewPaste = () => {
                     )}
                     <p>Views: {paste.viewCount}</p>
                   </div>
-                  {paste && <CodeViewer code={paste.content} language={paste.language} />}
+                  <CodeViewer code={paste.content} language={paste.language} />
                 </div>
               ) : null}
             </div>
           </div>
         </section>
       </main>
-      <div className="diagonal-line my-8" />
       <Footer />
     </div>
   );

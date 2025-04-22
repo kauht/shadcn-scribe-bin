@@ -15,7 +15,7 @@ const Index = () => {
                 Share code snippets instantly
               </h1>
               <p className="mx-auto max-w-[700px] text-muted-foreground md:text-xl">
-                CodeBin is a simple, fast, and secure pastebin service.
+                kaught.cc is a simple, fast, and secure pastebin service.
               </p>
             </div>
           </div>
@@ -28,7 +28,6 @@ const Index = () => {
           </div>
         </section>
       </main>
-      <div className="diagonal-line my-8" />
       <Footer />
     </div>
   );

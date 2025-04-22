@@ -18,7 +18,7 @@ import { Footer } from "@/components/Footer";
 
 const Register = () => {
   const navigate = useNavigate();
-  const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -27,7 +27,7 @@ const Register = () => {
     e.preventDefault();
     
     // Simple validation
-    if (!name || !email || !password) {
+    if (!username || !email || !password) {
       toast.error("Please fill in all fields");
       return;
     }
@@ -38,7 +38,7 @@ const Register = () => {
     }
     
     try {
-      createUser(email, password, name);
+      createUser(email, password, username);
       login(email, password);
       toast.success("Account created successfully");
       navigate("/");
@@ -65,15 +65,15 @@ const Register = () => {
                 <div className="space-y-2">
                   <label
                     className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                    htmlFor="name"
+                    htmlFor="username"
                   >
-                    Name
+                    Username
                   </label>
                   <Input
-                    id="name"
-                    placeholder="John Doe"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
+                    id="username"
+                    placeholder="johndoe"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
                     required
                   />
                 </div>
@@ -139,7 +139,6 @@ const Register = () => {
           </Card>
         </div>
       </main>
-      <div className="diagonal-line my-8" />
       <Footer />
     </div>
   );
