@@ -3,36 +3,20 @@ import { supabase } from './supabase';
 
 // User functions using Supabase Auth
 export async function createUser(email: string, password: string, name: string): Promise<User | null> {
-  const { data: authData, error: signUpError } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: {
-      data: { name }
-    }
+    options: { data: { name } }
   });
-  
-  if (signUpError) throw signUpError;
-  return authData.user ? {
-    id: authData.user.id,
-    email: authData.user.email!,
-    name: authData.user.user_metadata.name,
-    createdAt: new Date(authData.user.created_at)
-  } : null;
+  if (error) throw error;
+  return data.user ? { id: data.user.id, email: data.user.email!, name, createdAt: new Date() } : null;
 }
 
 export async function login(email: string, password: string): Promise<User | null> {
-  const { data: { session }, error } = await supabase.auth.signInWithPassword({
-    email,
-    password
-  });
-  
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) throw error;
-  return session?.user ? {
-    id: session.user.id,
-    email: session.user.email!,
-    name: session.user.user_metadata.name,
-    createdAt: new Date(session.user.created_at)
-  } : null;
+  const user = data.user;
+  return user ? { id: user.id, email: user.email!, name: user.user_metadata.name, createdAt: new Date(user.created_at) } : null;
 }
 
 export async function logout(): Promise<void> {
@@ -40,54 +24,29 @@ export async function logout(): Promise<void> {
 }
 
 export async function getCurrentUser(): Promise<User | null> {
-  const { data: { session }, error } = await supabase.auth.getSession();
-  if (error || !session?.user) return null;
-  
-  return {
-    id: session.user.id,
-    email: session.user.email!,
-    name: session.user.user_metadata.name,
-    createdAt: new Date(session.user.created_at)
-  };
+  const { data } = await supabase.auth.getUser();
+  const user = data.user;
+  return user ? { id: user.id, email: user.email!, name: user.user_metadata.name, createdAt: new Date(user.created_at) } : null;
 }
 
 // Paste functions
 export async function createPaste(pasteData: Omit<Paste, 'id' | 'createdAt' | 'viewCount'>): Promise<Paste | null> {
   const { data, error } = await supabase
     .from('pastes')
-    .insert([{
-      title: pasteData.title,
-      content: pasteData.content,
-      language: pasteData.language,
-      expire_at: pasteData.expireAt?.toISOString(),
-      user_id: pasteData.userId,
-      is_private: pasteData.isPrivate,
-      is_password_protected: pasteData.isPasswordProtected,
-      password: pasteData.password,
-      burn_after_read: pasteData.burnAfterRead,
-      view_count: 0
-    }])
+    .insert({
+      ...pasteData,
+      created_at: new Date().toISOString(),
+      view_count: 0,
+    })
     .select()
     .single();
 
   if (error) {
     console.error('Failed to create paste:', error);
-    throw error;
+    return null;
   }
 
-  return {
-    id: data.id,
-    title: data.title,
-    content: data.content,
-    language: data.language,
-    createdAt: new Date(data.created_at),
-    expireAt: data.expire_at ? new Date(data.expire_at) : null,
-    userId: data.user_id,
-    isPrivate: data.is_private,
-    isPasswordProtected: data.is_password_protected,
-    burnAfterRead: data.burn_after_read,
-    viewCount: data.view_count
-  };
+  return data;
 }
 
 export async function getPasteById(id: string): Promise<Paste | null> {
@@ -98,32 +57,17 @@ export async function getPasteById(id: string): Promise<Paste | null> {
     .single();
 
   if (error) {
-    if (error.code === 'PGRST116') {
-      return null; // Paste not found
-    }
-    throw error;
+    console.error('Failed to fetch paste:', error);
+    return null;
   }
 
-  if (!data) return null;
-
+  // Check if paste has expired
   if (data.expire_at && new Date(data.expire_at) < new Date()) {
     await deletePaste(id);
     return null;
   }
 
-  return {
-    id: data.id,
-    title: data.title,
-    content: data.content,
-    language: data.language,
-    createdAt: new Date(data.created_at),
-    expireAt: data.expire_at ? new Date(data.expire_at) : null,
-    userId: data.user_id,
-    isPrivate: data.is_private,
-    isPasswordProtected: data.is_password_protected,
-    burnAfterRead: data.burn_after_read,
-    viewCount: data.view_count
-  };
+  return data;
 }
 
 export async function deletePaste(id: string): Promise<boolean> {
@@ -162,35 +106,4 @@ export async function checkPassword(pasteId: string, password: string): Promise<
   }
 
   return data;
-}
-
-export async function getUserPastes(userId: string): Promise<Paste[]> {
-  const { data, error } = await supabase
-    .from('pastes')
-    .select('*')
-    .eq('userId', userId)
-    .order('createdAt', { ascending: false });
-
-  if (error) {
-    console.error('Failed to fetch user pastes:', error);
-    return [];
-  }
-  return data as Paste[];
-}
-
-// Helper function to transform database response to Paste type
-function transformPasteFromDB(data: any): Paste {
-  return {
-    id: data.id,
-    title: data.title,
-    content: data.content,
-    language: data.language,
-    createdAt: new Date(data.created_at),
-    expireAt: data.expire_at ? new Date(data.expire_at) : null,
-    userId: data.user_id,
-    isPrivate: data.is_private,
-    isPasswordProtected: data.is_password_protected,
-    burnAfterRead: data.burn_after_read,
-    viewCount: data.view_count
-  };
 }

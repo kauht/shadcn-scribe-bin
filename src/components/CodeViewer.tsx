@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -30,44 +31,34 @@ export function CodeViewer() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [paste, setPaste] = useState<Paste | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [isPasswordRequired, setIsPasswordRequired] = useState(false);
   const [password, setPassword] = useState("");
   const [burnWarningOpen, setBurnWarningOpen] = useState(false);
-
-  const loadPaste = async () => {
+  
+  const loadPaste = () => {
     if (!id) return;
     
-    try {
-      setIsLoading(true);
-      const pasteData = await getPasteById(id);
-      
-      if (!pasteData) {
-        toast.error("Paste not found or has expired");
-        navigate("/");
-        return;
-      }
-
-      if (pasteData.isPasswordProtected && !isPasswordRequired) {
-        setIsPasswordRequired(true);
-        return;
-      }
-
-      if (pasteData.burnAfterRead && !burnWarningOpen) {
-        setBurnWarningOpen(true);
-        return;
-      }
-
-      setPaste(pasteData);
-    } catch (error) {
-      console.error('Failed to load paste:', error);
-      toast.error("Failed to load paste");
+    const pasteData = getPasteById(id);
+    
+    if (!pasteData) {
+      toast.error("Paste not found or has expired");
       navigate("/");
-    } finally {
-      setIsLoading(false);
+      return;
     }
+    
+    if (pasteData.isPasswordProtected && !isPasswordRequired) {
+      setIsPasswordRequired(true);
+      return;
+    }
+    
+    if (pasteData.burnAfterRead && !burnWarningOpen) {
+      setBurnWarningOpen(true);
+      return;
+    }
+    
+    setPaste(pasteData);
   };
-
+  
   useEffect(() => {
     loadPaste();
   }, [id]);
@@ -144,10 +135,6 @@ export function CodeViewer() {
         </AlertDialogContent>
       </AlertDialog>
     );
-  }
-  
-  if (isLoading) {
-    return <div className="flex justify-center p-8">Loading...</div>;
   }
   
   if (!paste) {
