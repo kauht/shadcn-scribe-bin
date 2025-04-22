@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { Header } from "@/components/Header";
@@ -51,7 +50,9 @@ const ViewPaste = () => {
               {isLoading ? (
                 <div className="text-center">Loading...</div>
               ) : error ? (
-                <div className="text-center text-red-500">{error instanceof Error ? error.message : String(error)}</div>
+                <div className="text-center text-red-500">
+                  {error instanceof Error ? error.message : JSON.stringify(error)}
+                </div>
               ) : needsPassword ? (
                 <div className="bg-card p-6 rounded-lg shadow">
                   <h2 className="text-xl font-semibold mb-4">This paste is password protected</h2>
