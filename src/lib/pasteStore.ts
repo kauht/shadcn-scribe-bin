@@ -98,7 +98,9 @@ export async function getPasteById(id: string): Promise<Paste | null> {
     .single();
 
   if (error) {
-    console.error('Failed to fetch paste:', error);
+    if (error.code === 'PGRST116') {
+      return null; // Paste not found
+    }
     throw error;
   }
 
