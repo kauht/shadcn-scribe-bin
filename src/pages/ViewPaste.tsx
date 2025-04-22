@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -13,6 +14,14 @@ const ViewPaste = () => {
   const [password, setPassword] = useState("");
   const [needsPassword, setNeedsPassword] = useState(false);
   const [passwordVerified, setPasswordVerified] = useState(false);
+
+  useEffect(() => {
+    if (paste?.isPasswordProtected && !passwordVerified) {
+      setNeedsPassword(true);
+    } else if (paste && !isLoading) {
+      incrementViewCount();
+    }
+  }, [paste, isLoading, passwordVerified]);
 
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,7 +51,7 @@ const ViewPaste = () => {
               {isLoading ? (
                 <div className="text-center">Loading...</div>
               ) : error ? (
-                <div className="text-center text-red-500">{error}</div>
+                <div className="text-center text-red-500">{error instanceof Error ? error.message : String(error)}</div>
               ) : needsPassword ? (
                 <div className="bg-card p-6 rounded-lg shadow">
                   <h2 className="text-xl font-semibold mb-4">This paste is password protected</h2>
