@@ -36,6 +36,7 @@ export function PasteForm() {
   
   const [isPasswordProtected, setIsPasswordProtected] = useState(false);
   const [burnAfterRead, setBurnAfterRead] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm({
     defaultValues: {
@@ -57,15 +58,18 @@ export function PasteForm() {
     }
   };
 
-  const onSubmit = form.handleSubmit(async (values) => {
+  const onSubmit = form.handleSubmit((values) => {
     if (!values.content.trim()) {
       toast.error("Paste content cannot be empty");
       return;
     }
 
+    setIsSubmitting(true);
+
     try {
       const expireAt = getExpiryDate(values.expiry);
       
+      // Create the paste
       const paste = createPaste({
         title: values.title || "Untitled",
         content: values.content,
@@ -78,11 +82,15 @@ export function PasteForm() {
         burnAfterRead: values.expiry === "burn" || burnAfterRead,
       });
 
+      // Show success notification
       toast.success("Paste created successfully");
-      navigate(`/paste/${paste.id}`, { replace: true });
+      
+      // Navigate using window.location instead of navigate() to avoid router issues
+      window.location.href = `/paste/${paste.id}`;
     } catch (error) {
       console.error("Failed to create paste:", error);
       toast.error(error instanceof Error ? error.message : "Failed to create paste");
+      setIsSubmitting(false);
     }
   });
 
@@ -273,8 +281,8 @@ export function PasteForm() {
           </div>
         </div>
 
-        <Button type="submit" className="w-full md:w-auto">
-          Create Paste
+        <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting}>
+          {isSubmitting ? "Creating..." : "Create Paste"}
         </Button>
       </form>
     </Form>
