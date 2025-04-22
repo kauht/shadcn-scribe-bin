@@ -1,13 +1,12 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { CodeViewer } from "@/components/CodeViewer";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { getPasteById, incrementViewCount } from "@/lib/pasteStore";
+import { getPasteById, incrementViewCount, checkPassword } from "@/lib/pasteStore";
 import { Paste } from "@/lib/types";
 
 const ViewPaste = () => {
@@ -63,7 +62,7 @@ const ViewPaste = () => {
         return;
       }
       
-      if (pasteData.password === password) {
+      if (checkPassword(id, password)) {
         setPasswordVerified(true);
         setPaste(pasteData);
         incrementViewCount(id);
@@ -114,7 +113,14 @@ const ViewPaste = () => {
                     )}
                     <p>Views: {paste.viewCount}</p>
                   </div>
-                  <CodeViewer code={paste.content} language={paste.language} />
+                  <div className="relative">
+                    <div className="absolute top-0 right-0 bg-muted px-3 py-1 rounded-bl text-xs">
+                      {paste.language}
+                    </div>
+                    <pre className="p-4 rounded-md bg-muted/50 border overflow-x-auto code-editor whitespace-pre-wrap">
+                      <code>{paste.content}</code>
+                    </pre>
+                  </div>
                 </div>
               ) : null}
             </div>
