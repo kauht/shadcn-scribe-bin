@@ -48,7 +48,7 @@ export function usePaste(id: string | undefined) {
   
   // Function to increment view count
   const incrementViews = () => {
-    if (id) {
+    if (id && paste) {
       incrementViewCount(id);
     }
   };

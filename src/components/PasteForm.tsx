@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,6 +51,8 @@ export function PasteForm() {
     }
   });
 
+  const navigate = useNavigate();
+
   // Handle expiry option changes
   const handleExpiryChange = useCallback((value: string) => {
     form.setValue("expiry", value);
@@ -93,10 +96,9 @@ export function PasteForm() {
       // Show success message
       toast.success("Paste created successfully");
       
-      // Redirect to the paste view using window.location for reliability
-      setTimeout(() => {
-        window.location.href = `/paste/${paste.id}`;
-      }, 500);
+      // Use React Router navigation with a relative path instead of window.location
+      // This ensures we stay within the application
+      navigate(`/paste/${paste.id}`);
     } catch (error) {
       console.error("Failed to create paste:", error);
       toast.error(error instanceof Error ? error.message : "Failed to create paste");
