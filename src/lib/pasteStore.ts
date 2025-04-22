@@ -120,23 +120,28 @@ export function getUserPastes(userId: string): Paste[] {
 
 // Paste functions
 export function createPaste(pasteData: Omit<Paste, 'id' | 'createdAt' | 'viewCount'>): Paste {
-  if (!pasteData.content) {
-    throw new Error("Paste content is required");
-  }
-  if (!pasteData.title) {
-    throw new Error("Paste title is required");
-  }
+  try {
+    if (!pasteData.content?.trim()) {
+      throw new Error("Paste content is required");
+    }
+    if (!pasteData.title?.trim()) {
+      throw new Error("Paste title is required");
+    }
 
-  const newPaste: Paste = {
-    ...pasteData,
-    id: generateId(8),
-    createdAt: new Date(),
-    viewCount: 0,
-  };
-  
-  pastes.push(newPaste);
-  savePastes(pastes);
-  return newPaste;
+    const newPaste: Paste = {
+      ...pasteData,
+      id: generateId(8),
+      createdAt: new Date(),
+      viewCount: 0,
+    };
+    
+    pastes.push(newPaste);
+    savePastes(pastes);
+    return newPaste;
+  } catch (error) {
+    console.error("Failed to create paste:", error);
+    throw error; // Re-throw the error to be handled by the form
+  }
 }
 
 export function getPasteById(id: string): Paste | null {
