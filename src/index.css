@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -116,5 +115,17 @@
   .code-editor {
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     tab-size: 2;
+  }
+
+  .vertical-line {
+    @apply absolute top-0 bottom-0 w-[1px] bg-border opacity-50;
+  }
+
+  .vertical-line-left {
+    @apply left-4 md:left-6;
+  }
+
+  .vertical-line-right {
+    @apply right-4 md:right-6;
   }
 }

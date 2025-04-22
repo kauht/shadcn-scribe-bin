@@ -21,6 +21,10 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider defaultTheme="system">
       <TooltipProvider>
+        {/* Vertical lines */}
+        <div className="vertical-line vertical-line-left" />
+        <div className="vertical-line vertical-line-right" />
+        
         <Toaster />
         <Sonner />
         <BrowserRouter>
