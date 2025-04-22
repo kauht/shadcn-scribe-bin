@@ -33,11 +33,18 @@ export async function getCurrentUser(): Promise<User | null> {
 export async function createPaste(pasteData: Omit<Paste, 'id' | 'createdAt' | 'viewCount'>): Promise<Paste | null> {
   const { data, error } = await supabase
     .from('pastes')
-    .insert({
-      ...pasteData,
-      created_at: new Date().toISOString(),
-      view_count: 0,
-    })
+    .insert([{
+      title: pasteData.title,
+      content: pasteData.content,
+      language: pasteData.language,
+      expire_at: pasteData.expireAt,
+      user_id: pasteData.userId,
+      is_private: pasteData.isPrivate,
+      is_password_protected: pasteData.isPasswordProtected,
+      password: pasteData.password,
+      burn_after_read: pasteData.burnAfterRead,
+      view_count: 0
+    }])
     .select()
     .single();
 
@@ -46,7 +53,7 @@ export async function createPaste(pasteData: Omit<Paste, 'id' | 'createdAt' | 'v
     return null;
   }
 
-  return data;
+  return transformPasteFromDB(data);
 }
 
 export async function getPasteById(id: string): Promise<Paste | null> {
@@ -61,13 +68,12 @@ export async function getPasteById(id: string): Promise<Paste | null> {
     return null;
   }
 
-  // Check if paste has expired
   if (data.expire_at && new Date(data.expire_at) < new Date()) {
     await deletePaste(id);
     return null;
   }
 
-  return data;
+  return transformPasteFromDB(data);
 }
 
 export async function deletePaste(id: string): Promise<boolean> {
@@ -120,4 +126,21 @@ export async function getUserPastes(userId: string): Promise<Paste[]> {
     return [];
   }
   return data as Paste[];
+}
+
+// Helper function to transform database response to Paste type
+function transformPasteFromDB(data: any): Paste {
+  return {
+    id: data.id,
+    title: data.title,
+    content: data.content,
+    language: data.language,
+    createdAt: new Date(data.created_at),
+    expireAt: data.expire_at ? new Date(data.expire_at) : null,
+    userId: data.user_id,
+    isPrivate: data.is_private,
+    isPasswordProtected: data.is_password_protected,
+    burnAfterRead: data.burn_after_read,
+    viewCount: data.view_count
+  };
 }
