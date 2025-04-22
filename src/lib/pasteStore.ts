@@ -107,3 +107,17 @@ export async function checkPassword(pasteId: string, password: string): Promise<
 
   return data;
 }
+
+export async function getUserPastes(userId: string): Promise<Paste[]> {
+  const { data, error } = await supabase
+    .from('pastes')
+    .select('*')
+    .eq('userId', userId)
+    .order('createdAt', { ascending: false });
+
+  if (error) {
+    console.error('Failed to fetch user pastes:', error);
+    return [];
+  }
+  return data as Paste[];
+}
