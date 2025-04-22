@@ -3,20 +3,36 @@ import { supabase } from './supabase';
 
 // User functions using Supabase Auth
 export async function createUser(email: string, password: string, name: string): Promise<User | null> {
-  const { data, error } = await supabase.auth.signUp({
+  const { data: authData, error: signUpError } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { name } }
+    options: {
+      data: { name }
+    }
   });
-  if (error) throw error;
-  return data.user ? { id: data.user.id, email: data.user.email!, name, createdAt: new Date() } : null;
+  
+  if (signUpError) throw signUpError;
+  return authData.user ? {
+    id: authData.user.id,
+    email: authData.user.email!,
+    name: authData.user.user_metadata.name,
+    createdAt: new Date(authData.user.created_at)
+  } : null;
 }
 
 export async function login(email: string, password: string): Promise<User | null> {
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data: { session }, error } = await supabase.auth.signInWithPassword({
+    email,
+    password
+  });
+  
   if (error) throw error;
-  const user = data.user;
-  return user ? { id: user.id, email: user.email!, name: user.user_metadata.name, createdAt: new Date(user.created_at) } : null;
+  return session?.user ? {
+    id: session.user.id,
+    email: session.user.email!,
+    name: session.user.user_metadata.name,
+    createdAt: new Date(session.user.created_at)
+  } : null;
 }
 
 export async function logout(): Promise<void> {
@@ -24,9 +40,15 @@ export async function logout(): Promise<void> {
 }
 
 export async function getCurrentUser(): Promise<User | null> {
-  const { data } = await supabase.auth.getUser();
-  const user = data.user;
-  return user ? { id: user.id, email: user.email!, name: user.user_metadata.name, createdAt: new Date(user.created_at) } : null;
+  const { data: { session }, error } = await supabase.auth.getSession();
+  if (error || !session?.user) return null;
+  
+  return {
+    id: session.user.id,
+    email: session.user.email!,
+    name: session.user.user_metadata.name,
+    createdAt: new Date(session.user.created_at)
+  };
 }
 
 // Paste functions
@@ -37,7 +59,7 @@ export async function createPaste(pasteData: Omit<Paste, 'id' | 'createdAt' | 'v
       title: pasteData.title,
       content: pasteData.content,
       language: pasteData.language,
-      expire_at: pasteData.expireAt,
+      expire_at: pasteData.expireAt?.toISOString(),
       user_id: pasteData.userId,
       is_private: pasteData.isPrivate,
       is_password_protected: pasteData.isPasswordProtected,
@@ -50,10 +72,22 @@ export async function createPaste(pasteData: Omit<Paste, 'id' | 'createdAt' | 'v
 
   if (error) {
     console.error('Failed to create paste:', error);
-    return null;
+    throw error;
   }
 
-  return transformPasteFromDB(data);
+  return {
+    id: data.id,
+    title: data.title,
+    content: data.content,
+    language: data.language,
+    createdAt: new Date(data.created_at),
+    expireAt: data.expire_at ? new Date(data.expire_at) : null,
+    userId: data.user_id,
+    isPrivate: data.is_private,
+    isPasswordProtected: data.is_password_protected,
+    burnAfterRead: data.burn_after_read,
+    viewCount: data.view_count
+  };
 }
 
 export async function getPasteById(id: string): Promise<Paste | null> {
@@ -65,15 +99,29 @@ export async function getPasteById(id: string): Promise<Paste | null> {
 
   if (error) {
     console.error('Failed to fetch paste:', error);
-    return null;
+    throw error;
   }
+
+  if (!data) return null;
 
   if (data.expire_at && new Date(data.expire_at) < new Date()) {
     await deletePaste(id);
     return null;
   }
 
-  return transformPasteFromDB(data);
+  return {
+    id: data.id,
+    title: data.title,
+    content: data.content,
+    language: data.language,
+    createdAt: new Date(data.created_at),
+    expireAt: data.expire_at ? new Date(data.expire_at) : null,
+    userId: data.user_id,
+    isPrivate: data.is_private,
+    isPasswordProtected: data.is_password_protected,
+    burnAfterRead: data.burn_after_read,
+    viewCount: data.view_count
+  };
 }
 
 export async function deletePaste(id: string): Promise<boolean> {
