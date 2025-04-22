@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
@@ -9,7 +10,7 @@ export const usePaste = (id?: string) => {
   const { data: paste, isLoading, error } = useQuery({
     queryKey: ['paste', id],
     queryFn: async () => {
-      if (!id) throw new Error('Invalid paste ID')
+      if (!id) return null
       
       const { data, error } = await supabase
         .from('pastes')
@@ -17,18 +18,10 @@ export const usePaste = (id?: string) => {
         .eq('id', id)
         .single()
 
-      if (error) {
-        if (error.code === 'PGRST116') {
-          throw new Error('Paste not found')
-        }
-        throw error
-      }
-      
-      if (!data) throw new Error('Paste not found')
-      
+      if (error) throw error
       return data as Paste
     },
-    retry: false
+    enabled: !!id
   })
 
   const incrementViewCount = useMutation({

@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -32,17 +33,10 @@ export function PasteForm() {
   const navigate = useNavigate();
   const languages = getLanguages();
   const expiryOptions = getExpiryOptions();
-  const [currentUser, setCurrentUser] = useState(null);
-  const [loadingUser, setLoadingUser] = useState(true);
+  const currentUser = getCurrentUser();
+  
   const [isPasswordProtected, setIsPasswordProtected] = useState(false);
   const [burnAfterRead, setBurnAfterRead] = useState(false);
-
-  useEffect(() => {
-    getCurrentUser().then(user => {
-      setCurrentUser(user);
-      setLoadingUser(false);
-    });
-  }, []);
 
   const form = useForm({
     defaultValues: {
@@ -64,14 +58,16 @@ export function PasteForm() {
     }
   };
 
-  const onSubmit = form.handleSubmit(async (values) => {
+  const onSubmit = form.handleSubmit((values) => {
     if (!values.content.trim()) {
       toast.error("Paste content cannot be empty");
       return;
     }
+
     try {
       const expireAt = getExpiryDate(values.expiry);
-      const paste = await createPaste({
+      
+      const paste = createPaste({
         title: values.title || "Untitled",
         content: values.content,
         language: values.language,
@@ -82,7 +78,7 @@ export function PasteForm() {
         password: isPasswordProtected ? values.password : undefined,
         burnAfterRead: values.expiry === "burn" || burnAfterRead,
       });
-      if (!paste) throw new Error("Paste creation failed");
+
       toast.success("Paste created successfully");
       navigate(`/paste/${paste.id}`);
     } catch (error) {
@@ -90,10 +86,6 @@ export function PasteForm() {
       console.error(error);
     }
   });
-
-  if (loadingUser) {
-    return <div>Loading...</div>;
-  }
 
   return (
     <Form {...form}>
