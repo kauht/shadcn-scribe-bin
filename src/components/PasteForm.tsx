@@ -69,7 +69,6 @@ export function PasteForm() {
     try {
       const expireAt = getExpiryDate(values.expiry);
       
-      // Create the paste
       const paste = createPaste({
         title: values.title || "Untitled",
         content: values.content,
@@ -82,10 +81,9 @@ export function PasteForm() {
         burnAfterRead: values.expiry === "burn" || burnAfterRead,
       });
 
-      // Show success notification
       toast.success("Paste created successfully");
       
-      // Navigate using window.location instead of navigate() to avoid router issues
+      // Use simple redirect instead of navigate
       window.location.href = `/paste/${paste.id}`;
     } catch (error) {
       console.error("Failed to create paste:", error);
