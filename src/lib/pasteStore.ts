@@ -124,12 +124,10 @@ export function createPaste(pasteData: Omit<Paste, 'id' | 'createdAt' | 'viewCou
     if (!pasteData.content?.trim()) {
       throw new Error("Paste content is required");
     }
-    if (!pasteData.title?.trim()) {
-      throw new Error("Paste title is required");
-    }
 
     const newPaste: Paste = {
       ...pasteData,
+      title: pasteData.title?.trim() || "Untitled",
       id: generateId(8),
       createdAt: new Date(),
       viewCount: 0,
@@ -140,7 +138,7 @@ export function createPaste(pasteData: Omit<Paste, 'id' | 'createdAt' | 'viewCou
     return newPaste;
   } catch (error) {
     console.error("Failed to create paste:", error);
-    throw error; // Re-throw the error to be handled by the form
+    throw error;
   }
 }
 

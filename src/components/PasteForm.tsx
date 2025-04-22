@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -58,7 +57,7 @@ export function PasteForm() {
     }
   };
 
-  const onSubmit = form.handleSubmit((values) => {
+  const onSubmit = form.handleSubmit(async (values) => {
     if (!values.content.trim()) {
       toast.error("Paste content cannot be empty");
       return;
@@ -72,7 +71,7 @@ export function PasteForm() {
         content: values.content,
         language: values.language,
         expireAt,
-        userId: currentUser?.id || null,
+        userId: currentUser?.id || "anonymous",
         isPrivate: values.isPrivate,
         isPasswordProtected,
         password: isPasswordProtected ? values.password : undefined,
@@ -80,10 +79,10 @@ export function PasteForm() {
       });
 
       toast.success("Paste created successfully");
-      navigate(`/paste/${paste.id}`);
+      navigate(`/paste/${paste.id}`, { replace: true });
     } catch (error) {
-      toast.error("Failed to create paste");
-      console.error(error);
+      console.error("Failed to create paste:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to create paste");
     }
   });
 
