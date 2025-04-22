@@ -1,71 +1,27 @@
-
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { getPasteById, incrementViewCount, checkPassword } from "@/lib/pasteStore";
-import { Paste } from "@/lib/types";
+import { usePaste } from "@/hooks/usePaste";
 
 const ViewPaste = () => {
   const { id } = useParams<{ id: string }>();
-  const [paste, setPaste] = useState<Paste | null>(null);
+  const { paste, isLoading, error, incrementViewCount, checkPassword } = usePaste(id);
   const [password, setPassword] = useState("");
   const [needsPassword, setNeedsPassword] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
   const [passwordVerified, setPasswordVerified] = useState(false);
 
-  useEffect(() => {
-    if (!id) {
-      setError("Paste not found");
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const pasteData = getPasteById(id);
-      
-      if (!pasteData) {
-        setError("Paste not found");
-        setLoading(false);
-        return;
-      }
-
-      if (pasteData.isPasswordProtected && !passwordVerified) {
-        setNeedsPassword(true);
-        setLoading(false);
-      } else {
-        setPaste(pasteData);
-        incrementViewCount(id);
-        setLoading(false);
-      }
-    } catch (error) {
-      console.error(error);
-      setError("Failed to load paste");
-      setLoading(false);
-    }
-  }, [id, passwordVerified]);
-
-  const handlePasswordSubmit = (e: React.FormEvent) => {
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!id) return;
-    
     try {
-      const pasteData = getPasteById(id);
-      
-      if (!pasteData) {
-        setError("Paste not found");
-        return;
-      }
-      
-      if (checkPassword(id, password)) {
+      const isValid = await checkPassword(password);
+      if (isValid) {
         setPasswordVerified(true);
-        setPaste(pasteData);
-        incrementViewCount(id);
+        incrementViewCount();
         setNeedsPassword(false);
       } else {
         toast.error("Incorrect password");
@@ -83,7 +39,7 @@ const ViewPaste = () => {
         <section className="py-8 md:py-12">
           <div className="container px-4 md:px-6">
             <div className="mx-auto max-w-3xl">
-              {loading ? (
+              {isLoading ? (
                 <div className="text-center">Loading...</div>
               ) : error ? (
                 <div className="text-center text-red-500">{error}</div>
