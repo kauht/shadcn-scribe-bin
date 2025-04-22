@@ -118,14 +118,18 @@
   }
 
   .vertical-line {
-    @apply absolute top-0 bottom-0 w-[1px] bg-border opacity-50;
+    @apply absolute top-0 bottom-0 w-[1px] bg-border opacity-50 border-dashed border-l;
   }
 
   .vertical-line-left {
-    @apply left-4 md:left-6;
+    @apply left-2 md:left-4;
   }
 
   .vertical-line-right {
-    @apply right-4 md:right-6;
+    @apply right-2 md:right-4;
+  }
+
+  .diagonal-line::after {
+    @apply border-dashed;
   }
 }

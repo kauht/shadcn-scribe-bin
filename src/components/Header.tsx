@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -23,7 +22,7 @@ export function Header() {
   };
 
   return (
-    <header className="border-b">
+    <header className="border-b border-dashed border-border/50">
       <div className="container flex items-center justify-between h-14 px-4 md:px-6">
         <div className="flex items-center gap-2">
           <Link 
