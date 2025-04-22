@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -23,23 +22,19 @@ const Register = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Simple validation
     if (!username || !email || !password) {
       toast.error("Please fill in all fields");
       return;
     }
-    
     if (password !== confirmPassword) {
       toast.error("Passwords do not match");
       return;
     }
-    
     try {
-      createUser(email, password, username);
-      login(email, password);
+      await createUser(email, password, username);
+      await login(email, password);
       toast.success("Account created successfully");
       navigate("/");
     } catch (error) {

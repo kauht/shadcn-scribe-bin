@@ -1,241 +1,109 @@
-
 import { Paste, User } from "./types";
-import { generateId } from "./utils";
+import { supabase } from './supabase';
 
-// Mock database with localStorage persistence
-const storageKeys = {
-  users: "kaught_users",
-  pastes: "kaught_pastes",
-  currentUser: "kaught_current_user"
-};
-
-// Initialize storage
-const initializeStorage = () => {
-  if (typeof window === 'undefined') return; // Skip if not in browser context
-  
-  if (!localStorage.getItem(storageKeys.users)) {
-    localStorage.setItem(storageKeys.users, JSON.stringify([]));
-  }
-  
-  if (!localStorage.getItem(storageKeys.pastes)) {
-    localStorage.setItem(storageKeys.pastes, JSON.stringify([]));
-  }
-};
-
-// Load data from localStorage
-const loadUsers = (): User[] => {
-  if (typeof window === 'undefined') return []; // Skip if not in browser context
-  
-  try {
-    const data = localStorage.getItem(storageKeys.users);
-    return data ? JSON.parse(data) : [];
-  } catch (error) {
-    console.error("Failed to load users:", error);
-    return [];
-  }
-};
-
-const loadPastes = (): Paste[] => {
-  if (typeof window === 'undefined') return []; // Skip if not in browser context
-  
-  try {
-    const data = localStorage.getItem(storageKeys.pastes);
-    return data ? JSON.parse(data) : [];
-  } catch (error) {
-    console.error("Failed to load pastes:", error);
-    return [];
-  }
-};
-
-const loadCurrentUser = (): User | null => {
-  if (typeof window === 'undefined') return null; // Skip if not in browser context
-  
-  try {
-    const data = localStorage.getItem(storageKeys.currentUser);
-    return data ? JSON.parse(data) : null;
-  } catch (error) {
-    console.error("Failed to load current user:", error);
-    return null;
-  }
-};
-
-// Save data to localStorage
-const saveUsers = (users: User[]) => {
-  if (typeof window === 'undefined') return; // Skip if not in browser context
-  localStorage.setItem(storageKeys.users, JSON.stringify(users));
-};
-
-const savePastes = (pastes: Paste[]) => {
-  if (typeof window === 'undefined') return; // Skip if not in browser context
-  localStorage.setItem(storageKeys.pastes, JSON.stringify(pastes));
-};
-
-const saveCurrentUser = (user: User | null) => {
-  if (typeof window === 'undefined') return; // Skip if not in browser context
-  localStorage.setItem(storageKeys.currentUser, user ? JSON.stringify(user) : "null");
-};
-
-// Initialize storage
-initializeStorage();
-
-// Load initial data
-let users = loadUsers();
-let pastes = loadPastes();
-let currentUser = loadCurrentUser();
-
-// User functions
-export function createUser(email: string, password: string, name: string): User {
-  const user = {
-    id: generateId(),
+// User functions using Supabase Auth
+export async function createUser(email: string, password: string, name: string): Promise<User | null> {
+  const { data, error } = await supabase.auth.signUp({
     email,
-    name,
-    createdAt: new Date(),
-  };
-  users.push(user);
-  saveUsers(users);
-  return user;
+    password,
+    options: { data: { name } }
+  });
+  if (error) throw error;
+  return data.user ? { id: data.user.id, email: data.user.email!, name, createdAt: new Date() } : null;
 }
 
-export function login(email: string, password: string): User | null {
-  const user = users.find(u => u.email === email);
-  if (user) {
-    currentUser = user;
-    saveCurrentUser(user);
-    return user;
-  }
-  return null;
+export async function login(email: string, password: string): Promise<User | null> {
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) throw error;
+  const user = data.user;
+  return user ? { id: user.id, email: user.email!, name: user.user_metadata.name, createdAt: new Date(user.created_at) } : null;
 }
 
-export function logout(): void {
-  currentUser = null;
-  saveCurrentUser(null);
+export async function logout(): Promise<void> {
+  await supabase.auth.signOut();
 }
 
-export function getCurrentUser(): User | null {
-  return currentUser;
-}
-
-export function getUserPastes(userId: string): Paste[] {
-  return pastes.filter(p => p.userId === userId && !p.burnAfterRead);
+export async function getCurrentUser(): Promise<User | null> {
+  const { data } = await supabase.auth.getUser();
+  const user = data.user;
+  return user ? { id: user.id, email: user.email!, name: user.user_metadata.name, createdAt: new Date(user.created_at) } : null;
 }
 
 // Paste functions
-export function createPaste(pasteData: Omit<Paste, 'id' | 'createdAt' | 'viewCount'>): Paste {
-  const newPaste: Paste = {
-    ...pasteData,
-    id: generateId(8),
-    createdAt: new Date(),
-    viewCount: 0,
-  };
-  
-  pastes.push(newPaste);
-  savePastes(pastes);
-  return newPaste;
-}
+export async function createPaste(pasteData: Omit<Paste, 'id' | 'createdAt' | 'viewCount'>): Promise<Paste | null> {
+  const { data, error } = await supabase
+    .from('pastes')
+    .insert({
+      ...pasteData,
+      created_at: new Date().toISOString(),
+      view_count: 0,
+    })
+    .select()
+    .single();
 
-export function getPasteById(id: string): Paste | null {
-  // Reload pastes from storage to ensure we have the latest data
-  pastes = loadPastes();
-  
-  const paste = pastes.find(p => p.id === id);
-  
-  if (!paste) {
+  if (error) {
+    console.error('Failed to create paste:', error);
     return null;
   }
-  
+
+  return data;
+}
+
+export async function getPasteById(id: string): Promise<Paste | null> {
+  const { data, error } = await supabase
+    .from('pastes')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error) {
+    console.error('Failed to fetch paste:', error);
+    return null;
+  }
+
   // Check if paste has expired
-  if (paste.expireAt && new Date(paste.expireAt) < new Date()) {
-    // Remove expired paste
-    pastes = pastes.filter(p => p.id !== id);
-    savePastes(pastes);
+  if (data.expire_at && new Date(data.expire_at) < new Date()) {
+    await deletePaste(id);
     return null;
   }
-  
-  return paste;
+
+  return data;
 }
 
-export function incrementViewCount(id: string): void {
-  const paste = pastes.find(p => p.id === id);
-  if (paste) {
-    paste.viewCount += 1;
-    savePastes(pastes);
-    
-    // Handle burn after read
-    if (paste.burnAfterRead && paste.viewCount > 1) {
-      // Remove from storage
-      pastes = pastes.filter(p => p.id !== id);
-      savePastes(pastes);
-    }
-  }
-}
+export async function deletePaste(id: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('pastes')
+    .delete()
+    .eq('id', id);
 
-export function checkPassword(pasteId: string, password: string): boolean {
-  const paste = pastes.find(p => p.id === pasteId);
-  if (!paste || !paste.isPasswordProtected) {
+  if (error) {
+    console.error('Failed to delete paste:', error);
     return false;
   }
-  return paste.password === password;
+
+  return true;
 }
 
-export function deletePaste(id: string): boolean {
-  const initialLength = pastes.length;
-  pastes = pastes.filter(p => p.id !== id);
-  savePastes(pastes);
-  return pastes.length !== initialLength;
-}
+export async function incrementViewCount(id: string): Promise<void> {
+  const { error } = await supabase
+    .rpc('increment_view_count', { paste_id: id });
 
-// Initialize with some demo data
-export function initializeDemo(): void {
-  // Only initialize if no pastes exist
-  if (pastes.length === 0) {
-    const demoUser = createUser("demo@example.com", "password", "Demo User");
-    
-    createPaste({
-      title: "Hello World in JavaScript",
-      content: "console.log('Hello World!');",
-      language: "javascript",
-      expireAt: null,
-      userId: demoUser.id,
-      isPrivate: false,
-      isPasswordProtected: false,
-      burnAfterRead: false,
-    });
-    
-    createPaste({
-      title: "Python Example",
-      content: "def hello():\n    print('Hello, World!')\n\nhello()",
-      language: "python",
-      expireAt: null,
-      userId: demoUser.id,
-      isPrivate: false,
-      isPasswordProtected: false,
-      burnAfterRead: false,
-    });
-    
-    createPaste({
-      title: "Private Note",
-      content: "This is a private note with a password",
-      language: "plaintext",
-      expireAt: null,
-      userId: demoUser.id,
-      isPrivate: true,
-      isPasswordProtected: true,
-      password: "secret",
-      burnAfterRead: false,
-    });
-    
-    createPaste({
-      title: "Burn After Reading",
-      content: "This paste will be deleted after it's viewed once!",
-      language: "plaintext",
-      expireAt: null,
-      userId: demoUser.id,
-      isPrivate: true,
-      isPasswordProtected: false,
-      burnAfterRead: true,
-    });
+  if (error) {
+    console.error('Failed to increment view count:', error);
   }
 }
 
-// Initialize the demo data
-initializeDemo();
+export async function checkPassword(pasteId: string, password: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .rpc('check_paste_password', {
+      paste_id: pasteId,
+      password_attempt: password,
+    });
+
+  if (error) {
+    console.error('Failed to check password:', error);
+    return false;
+  }
+
+  return data;
+}
